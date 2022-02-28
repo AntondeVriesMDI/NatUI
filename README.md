@@ -1,6 +1,6 @@
 # NatUI
-6. How To MusiG 
-6.1 LeapMotion starten
+How To MusiG 
+eapMotion starten
 LeapMotion Tracking Software herunterladen und installieren
 MacOS Version 2.3.1
 Link: https://developer.leapmotion.com/tracking-software-download
@@ -13,8 +13,9 @@ Link: https://developer.leapmotion.com/tracking-software-download
 Funktionalität wurde im Rahmen dieses Projektes nicht getestet.
 LeapMotion über USB an den Computer anschließen
 LeapMotion Control Panel starten
-6.2 Anwendung starten
 
+
+Anwendung starten
 Git Repository von https://github.com/AntondeVriesMDI/NatUI  klonen
 (node.js installieren)
 Im Projektverzeichnis:
