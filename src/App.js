@@ -5,7 +5,6 @@ function App() {
 
  
   return (
-    //<TestComponent></TestComponent>
     <div className="App">
       <header className="App-header">
       <SpotifyLogingComponent></SpotifyLogingComponent>

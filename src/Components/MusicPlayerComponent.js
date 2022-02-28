@@ -1,16 +1,21 @@
 import React from 'react';
+/**
+ * Component to recognize gestures and control Spotify functions
+ */
 class MusicPlayerComponent extends React.Component {
     constructor(props) {
         super(props);
-        this.weiter = this.weiter.bind(this);
+        this.next = this.next.bind(this);
         this.gestures = this.gestures.bind(this);
         this.state = {
+            // Token from SpotifyAuthorizationComponent
             token: props.token,
             player: '',
             currentPalmPosition: -1,
             timeVisible: -1,
             gestureDone: false,
-            track : {
+            // Default track to show for the start-View
+            track: {
                 name: "Willkommen zu MusiG",
                 album: {
                     images: [
@@ -24,18 +29,18 @@ class MusicPlayerComponent extends React.Component {
             trackPosition: -1
 
         }
- 
+
     }
 
 
-
     componentDidMount() {
+        // Append Spotify-API Script to App-Body
         const script = document.createElement("script");
         script.src = "https://sdk.scdn.co/spotify-player.js";
         script.async = true;
 
         document.body.appendChild(script);
-
+        // Checks if there is an active Player
         window.onSpotifyWebPlaybackSDKReady = () => {
 
             const player = new window.Spotify.Player({
@@ -46,50 +51,44 @@ class MusicPlayerComponent extends React.Component {
 
             this.state.player = player;
 
-            player.addListener('ready', ({ device_id }) => {
-                console.log('Ready with Device ID', device_id);
-            });
-
-            player.addListener('not_ready', ({ device_id }) => {
-                console.log('Device ID has gone offline', device_id);
-            });
-
+            // Connect to new Spotify-API instance
             player.connect();
 
-            console.log('Player: ', player)
-
-
-            
-
-            player.addListener('player_state_changed', ( state => {
-                
+            // if state of current player has changed global vars are beeing updated
+            player.addListener('player_state_changed', (state => {
                 if (!state) {
                     return;
                 }
-                this.setState({track: state.track_window.current_track})
-                this.setState({position: state.position})
-                console.log('Track !!!' + this.state.track.name)
-                console.log('Trackposition !!!' + this.state.position)
+                this.setState({ track: state.track_window.current_track })
+                this.setState({ position: state.position })
                 this.isPaused = state.paused;
                 this.isActive = false;
-                
+
             }));
 
         };
 
-        /** Gestures */
-       let controller =  window.Leap.loop({ enableGestures: true }, ()=>{
-        let frame2 = controller.frame(15);
-        if (frame2.valid && frame2.gestures.length > 0) {
-            this.leapGestures(frame2)
-        } else {
-            this.ourGestures(frame2)
-        }
-       });
+        // Leapjs checks if a valid frame and leapjs- gesture has been recognized
+        // true => Leapjs gestures are beeing checked
+        // false => self implemented gestures are beeing checked
+        let controller = window.Leap.loop({ enableGestures: true }, () => {
+            let frame = controller.frame(15);
+            if (frame.valid && frame.gestures.length > 0) {
+                this.leapGestures(frame)
+            } else {
+                this.ourGestures(frame)
+            }
+        });
     }
-
+    /**
+     * Checks if there is no current gesture recognized
+     * Checks if Leapjs has recognized gestures
+     * If no gesture from Leapjs has been recognized self-implemented gesture are checked
+     * @param {*} frame 
+     * @returns 
+     */
     gestures(frame) {
-        if (!this.state.gestureDone){
+        if (!this.state.gestureDone) {
             if (frame.valid && frame.gestures.length > 0 && frame.hands.length > 0) {
                 this.leapGestures(frame);
                 return;
@@ -100,36 +99,37 @@ class MusicPlayerComponent extends React.Component {
 
 
     }
-
+    /**
+     * Function for distinguishing gestures from Leap-Motion-API
+     * Checks if gesture is a swipe or circle
+     * Blocks other gestures during the gesture-function execution
+     * @param {*} frame 
+     */
     leapGestures(frame) {
-        console.log("GESTEN ERKANNT: " , frame.gestures)
         frame.gestures.forEach((gesture) => {
             switch (gesture.type) {
                 case "circle":
-                    //this.lauter();
                     this.jump()
-                    console.log("Circle Gesture");
-                    this.setState({gestureDone:true});
-                    setTimeout(()=> { this.setState({gestureDone:false}) }, 2000);
+                    this.setState({ gestureDone: true });
+                    setTimeout(() => { this.setState({ gestureDone: false }) }, 2000);
                     break;
                 case "swipe":
-                    //Classify swipe as either horizontal or vertical
+                    // Classify swipe as either horizontal or vertical
                     var isHorizontal = Math.abs(gesture.direction[0]) > Math.abs(gesture.direction[1]);
-                    //Classify as right-left or up-down
+                    // Classify as right-left or up-down
                     if (isHorizontal && frame.hands[0] !== undefined && (frame.hands[0].direction[1] <= 0.7)) {
                         if (gesture.direction[0] > 0 && gesture.state === "stop") {
-                            this.weiter();
-                            this.setState({gestureDone:true});
-                            setTimeout(()=> { this.setState({gestureDone:false}) }, 1000);
+                            this.next();
+                            this.setState({ gestureDone: true });
+                            setTimeout(() => { this.setState({ gestureDone: false }) }, 1000);
                             return;
-                        } else if(gesture.direction[0] <= 0 && gesture.state === "stop"){
-                            this.zurueck();
-                            this.setState({gestureDone:true});
-                            setTimeout(()=> { this.setState({gestureDone:false}) }, 1000);
+                        } else if (gesture.direction[0] <= 0 && gesture.state === "stop") {
+                            this.previous();
+                            this.setState({ gestureDone: true });
+                            setTimeout(() => { this.setState({ gestureDone: false }) }, 1000);
                             return;
                         }
                     }
-                    console.log("Swipe Gesture");
                     break;
                 default:
                     break;
@@ -137,23 +137,24 @@ class MusicPlayerComponent extends React.Component {
         });
     }
 
-
+    /**
+     * Function for distinguishing self implemented gestures
+     * Checks if gesture is a stop, volume-Up or volume-Down gesture
+     * Blocks other gestures during the gesture-function execution
+     * @param {*} frame 
+     */
     ourGestures(frame) {
         if (frame.hands.length > 0 && !this.state.gestureDone) {
             frame.hands.forEach((hand) => {
-                console.log("HAND DIRECTION: " ,hand.direction[1])
                 if (hand.direction[1] >= 0.9) {
-                    setTimeout(()=> { this.gestureStop(hand) }, 1000);
-                    
-                    this.setState({gestureDone:true});
-                    setTimeout(()=> { this.setState({gestureDone:false}) }, 10000);
+                    setTimeout(() => { this.gestureStop(hand) }, 1000);
+                    this.setState({ gestureDone: true });
+                    setTimeout(() => { this.setState({ gestureDone: false }) }, 10000);
                     return;
                 } else if (hand.palmPosition[1] >= this.state.currentPalmPosition + 1) {
-                    console.log("PALM POSITION:" , this.state.currentPalmPosition)
                     this.gestureVolup(hand);
                 } else if (hand.palmPosition[1] <= this.state.currentPalmPosition - 1) {
                     this.gestureVoldown(hand);
-                    console.log(this.state.currentPalmPosition)
                 }
             })
         } else if (frame.hands.length === 0 && this.state.gestureDone) {
@@ -161,31 +162,37 @@ class MusicPlayerComponent extends React.Component {
         }
     }
 
-    skipSeconds(){
-
-    }
-
+    /**
+     * Turns the Volume Up and set currentPalmPostion
+     * @param {*} hand 
+     */
     gestureVolup(hand) {
-        this.lauter();
-        console.log("LAUTER!");
+        this.volumeUp();
         this.setState({
             currentPalmPosition: hand.palmPosition[1]
         });
     }
 
+    /**
+     * Turns the Volume Down and set currentPalmPostion
+     * @param {*} hand 
+     */
     gestureVoldown(hand) {
-        this.leiser();
-        console.log("LEISER!");
+        this.volumeDown();
         this.setState({
             currentPalmPosition: hand.palmPosition[1]
         });
     }
+
+    /**
+     * Stops the Track
+     * Check if Y-Direction of Hand is greater than 0.8 for more than 2 seconds
+     * @param {*} hand 
+     */
     gestureStop(hand) {
-        console.log("HALT STOP");
         this.state.timeVisible = hand.timeVisible;
         this.state.gestureDone = true;
         setTimeout(() => {
-            console.log("2sec")
             if (hand.direction[1] >= 0.8) {
                 this.stop();
                 setTimeout(() => {
@@ -194,87 +201,83 @@ class MusicPlayerComponent extends React.Component {
             }
         }, 1);
     }
-    leiser() {
-        console.log("leiser");
-        let volume_percentage;
+
+    /**
+     * Turns the Volume Down
+     */
+    volumeDown() {
         this.state.player.getVolume().then(volume => {
-            //volume_percentage = volume * 100;
-            //console.log(`The volume of the player is ${volume_percentage}%`);
             if ((volume - 0.01) > 0) {
-                this.state.player.setVolume(volume - 0.01).then(() => {
-                    console.log('Volume' + volume);
-                });
+                this.state.player.setVolume(volume - 0.01);
             }
         });
-
     }
 
-    lauter() {
-        console.log("lauter");
+    /**
+     * Turns the Volume Up 
+     */
+    volumeUp() {
         this.state.player.getVolume().then(volume => {
-            //volume_percentage = volume * 100;
-            //console.log(`The volume of the player is ${volume_percentage}%`);
             if ((volume + 0.01) < 1) {
-                this.state.player.setVolume(volume + 0.01).then(() => {
-                    console.log('Volume' + volume);
-                });
+                this.state.player.setVolume(volume + 0.01);
             }
         });
     }
 
+    /**
+     * Stop or Start the current track
+     */
     stop() {
-        this.state.player.togglePlay().then(() => {
-            console.log("ich mache was (Start/Stop)")
-        });
+        this.state.player.togglePlay();
     }
 
-    weiter() {
-        this.state.player.nextTrack().then(() => {
-            console.log('Skipped to next track!');
-        });
+    /**
+     * Get the next track
+     */
+    next() {
+        this.state.player.nextTrack();
     }
 
-    zurueck() {
-        this.state.player.previousTrack().then(() => {
-            console.log('Skipped to next track!');
-        });
+    /**
+     * Get the previous track
+     */
+    previous() {
+        this.state.player.previousTrack();
     }
 
-    jump(){
-            if(this.state.position){
+    /**
+     * Jumps to a given second in track
+     * @returns 
+     */
+    jump() {
+        if (this.state.position) {
             this.state.player.seek(this.state.position + 10000);
-            console.log("jumpo")
             return;
-            }
-
-        //console.log(this.state.player)
-        //this.state.player.seek()
+        }
     }
 
-
+    /**
+     * Render Function for the View
+     * Shows the Cover-Image, Title and Artist of the current song
+     * @returns 
+     */
     render() {
-        console.log('In render MusikPlayer ' + this.state.track.name)
-        const track = this.state.track.name;
         return (
             <div className="container">
                 <div className="main-wrapper">
-            
-                <img src={this.state.track.album.images[0].url} 
-                     className="now-playing__cover" alt="" />
 
-                <div className="now-playing__side">
-                    <div className="now-playing__name">{
-                                  this.state.track.name
-                                  }</div>
+                    <img src={this.state.track.album.images[0].url}
+                        className="now-playing__cover" alt="" />
 
-                    <div className="now-playing__artist">{
-                                  this.state.track.artists[0].name
-                                  }</div>
-                </div>
-                    {/* <button onClick={() => this.leiser()}>Leiser</button>
-                    <button onClick={() => this.lauter()}>Lauter</button>
-                    <button onClick={() => this.weiter()}>Weiter</button>
-                    <button onClick={() => this.zurueck()}>Zurück</button> */}
+                    <div className="now-playing__side">
+                        <div className="now-playing__name">{
+                            this.state.track.name
+                        }</div>
+
+                        <div className="now-playing__artist">{
+                            this.state.track.artists[0].name
+                        }</div>
+                    </div>
                 </div>
             </div>
         );
