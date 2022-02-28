@@ -119,12 +119,12 @@ class MusicPlayerComponent extends React.Component {
                     // Classify as right-left or up-down
                     if (isHorizontal && frame.hands[0] !== undefined && (frame.hands[0].direction[1] <= 0.7)) {
                         if (gesture.direction[0] > 0 && gesture.state === "stop") {
-                            this.next();
+                            this.previous();
                             this.setState({ gestureDone: true });
                             setTimeout(() => { this.setState({ gestureDone: false }) }, 1000);
                             return;
                         } else if (gesture.direction[0] <= 0 && gesture.state === "stop") {
-                            this.previous();
+                            this.next();
                             this.setState({ gestureDone: true });
                             setTimeout(() => { this.setState({ gestureDone: false }) }, 1000);
                             return;
